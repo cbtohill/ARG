@@ -257,4 +257,46 @@ if __name__ == "__main__":
     plt.ylabel('z[1]')
     plt.savefig(os.path.join(logdir, 'latent_scatter.pdf'))
     
+    ##Plotting projection of latent space with TSNE, with reconstructed images instead of points. 
+    ##Code adapted from https://github.com/despoisj/LatentSpaceVisualization 
+
+    # Scatter with images instead of points
+    def imscatter(x, y, ax, imageData, zoom, vae):
+        """
+        Inputs:
+            x, y : TSNE points 
+            imageData: Your images for testing 
+        """
+        images = []
+        reconstructed_imgs = vae.predict(imageData)
+        for i in range(len(x)):
+            x0, y0 = x[i], y[i]
+            # Convert to image
+            img = reconstructed_imgs[i]
+            image = OffsetImage(img, zoom=zoom)
+            ab = AnnotationBbox(image, (x0, y0), xycoords='data', frameon=False)
+            images.append(ax.add_artist(ab))
+        ax.update_datalim(np.column_stack([x, y]))
+        ax.autoscale()
+
+    # Show dataset images with T-sne projection of latent space encoding
+    def computeTSNEProjectionOfLatentSpace(x_test, encoder, vae, save=True):
+        # Compute latent space representation
+        print("Computing latent space projection...")
+        z_mean, z_log_var, z = encoder.predict(x_test)
+        # Compute t-SNE embedding of latent space
+        print("Computing t-SNE embedding...")
+        tsne = manifold.TSNE(n_components=2, init='pca', random_state=0)
+        X_tsne = tsne.fit_transform(z_mean) #Not sure if you want to plot the means or sampled z but can easily change to z
+
+        # Plot images according to t-sne embedding
+        if save:
+            print("Plotting t-SNE visualization...")
+            fig, ax = plt.subplots()
+            imscatter(X_tsne[:, 0], X_tsne[:, 1], imageData=x_test, ax=ax, zoom=0.6, vae = vae)
+            plt.savefig('TSNE_scatter.png')
+        else:
+            return X_tsne
     
+
+    computeTSNEProjectionOfLatentSpace(gal_input_test, encoder,vae,save =True)
